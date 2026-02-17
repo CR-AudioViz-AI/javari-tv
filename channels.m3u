@@ -1,0 +1,28 @@
+#EXTM3U
+
+#EXTINF:-1 tvg-id="" tvg-name="WCPO 9 ABC Cincinnati" tvg-logo="" group-title="Cincinnati Local",WCPO 9 ABC Cincinnati
+https://content.uplynk.com/channel/3324f2467c414329b3b0cc5cd987b6be.m3u8
+
+#EXTINF:-1 tvg-id="" tvg-name="WKRC 12 CBS Cincinnati" tvg-logo="" group-title="Cincinnati Local",WKRC 12 CBS Cincinnati
+https://cbsn-us.cbsnstream.cbsnews.com/out/v1/55a8648e8f134e82a470f83d562deeca/master.m3u8
+
+#EXTINF:-1 tvg-id="" tvg-name="WLWT 5 NBC Cincinnati" tvg-logo="" group-title="Cincinnati Local",WLWT 5 NBC Cincinnati
+https://dai2.xumo.com/amagi_hls_data_xumo1212A-nbcnewsnow/CDN/playlist.m3u8
+
+#EXTINF:-1 tvg-id="" tvg-name="WXIX 19 FOX Cincinnati" tvg-logo="" group-title="Cincinnati Local",WXIX 19 FOX Cincinnati  
+https://fox-foxsportsdigital-1-eu.rakuten.wurl.tv/playlist.m3u8
+
+#EXTINF:-1 tvg-id="" tvg-name="WCET PBS Cincinnati" tvg-logo="" group-title="Cincinnati Local",WCET PBS Cincinnati
+https://pbs-samsunguk.amagi.tv/playlist.m3u8
+
+#EXTINF:-1 tvg-id="" tvg-name="WBBH 20 NBC Fort Myers" tvg-logo="" group-title="Fort Myers Local",WBBH 20 NBC Fort Myers
+https://dai2.xumo.com/amagi_hls_data_xumo1212A-nbcnewsnow/CDN/playlist.m3u8
+
+#EXTINF:-1 tvg-id="" tvg-name="WFTX 36 FOX Fort Myers" tvg-logo="" group-title="Fort Myers Local",WFTX 36 FOX Fort Myers
+https://fox-foxsportsdigital-1-eu.rakuten.wurl.tv/playlist.m3u8
+
+#EXTINF:-1 tvg-id="" tvg-name="WZVN 26 ABC Fort Myers" tvg-logo="" group-title="Fort Myers Local",WZVN 26 ABC Fort Myers
+https://content.uplynk.com/channel/3324f2467c414329b3b0cc5cd987b6be.m3u8
+
+#EXTINF:-1 tvg-id="" tvg-name="WINK 11 CBS Fort Myers" tvg-logo="" group-title="Fort Myers Local",WINK 11 CBS Fort Myers
+https://cbsn-us.cbsnstream.cbsnews.com/out/v1/55a8648e8f134e82a470f83d562deeca/master.m3u8

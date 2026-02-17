@@ -1,13 +1,19 @@
-// IMPROVED API Endpoint - Verify Streams Before Loading
+// COMPREHENSIVE MULTI-SOURCE CHANNEL LOADER
 // Javari TV - CR AudioViz AI
-// Roy Henderson - Feb 16, 2026 3:51 PM EST
-// Only loads VERIFIED working streams
+// Roy Henderson - Feb 16, 2026 4:26 PM EST
+// Loads THOUSANDS of channels from multiple M3U sources
 
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-const CHANNELS_URL = 'https://iptv-org.github.io/iptv/channels.json'
-const STREAMS_URL = 'https://iptv-org.github.io/iptv/streams.json'
+// M3U playlist sources for maximum channel coverage
+const M3U_SOURCES = [
+  'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',
+  'https://iptv-org.github.io/iptv/index.m3u',
+  'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/us.m3u',
+  'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/gb.m3u',
+  'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/ca.m3u'
+]
 
 const COUNTRY_CODES = {
   'us': 'United States',
