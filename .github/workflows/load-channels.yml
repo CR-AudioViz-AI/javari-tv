@@ -1,0 +1,37 @@
+# Auto-Load Channels GitHub Action
+# Javari TV - CR AudioViz AI
+# Roy Henderson - Feb 16, 2026 4:05 PM EST
+# Runs automatically after each deployment
+
+name: Load IPTV Channels
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/load-all-channels.js'
+      - '.github/workflows/load-channels.yml'
+
+jobs:
+  load-channels:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Load channels from IPTV-org
+        run: node scripts/load-all-channels.js
+        env:
+          SUPABASE_URL: https://kteobfyferrukqeolofj.supabase.co
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      
+      - name: Complete
+        run: echo "✅ Channel loading complete!"
