@@ -1,7 +1,7 @@
-// API Endpoint to Load IPTV-org Channels
+// IMPROVED API Endpoint - Verify Streams Before Loading
 // Javari TV - CR AudioViz AI
-// Roy Henderson - Feb 16, 2026 3:45 PM EST
-// Call this from browser: /api/load-channels
+// Roy Henderson - Feb 16, 2026 3:51 PM EST
+// Only loads VERIFIED working streams
 
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
@@ -36,7 +36,8 @@ function generateChannelId(name: string, country: string): string {
   const clean = name.toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
-  return `${country}-${clean}-${Date.now()}`.substring(0, 50)
+  const timestamp = Date.now().toString(36)
+  return `${country}-${clean}-${timestamp}`.substring(0, 60)
 }
 
 function categorizeChannel(name: string, categories?: string[]): string {
@@ -51,12 +52,41 @@ function categorizeChannel(name: string, categories?: string[]): string {
   return 'entertainment'
 }
 
-export async function GET() {
+async function verifyStream(url: string, timeout = 5000): Promise<boolean> {
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeout)
+    
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+      redirect: 'follow'
+    })
+    
+    clearTimeout(timeoutId)
+    
+    // Accept 200, 206 (partial content), or 301/302/307/308 redirects
+    return response.ok || 
+           response.status === 206 || 
+           (response.status >= 301 && response.status <= 308)
+  } catch (error) {
+    return false
+  }
+}
+
+export async function GET(request: Request) {
   const startTime = Date.now()
   const log: string[] = []
   
+  // Get query params
+  const url = new URL(request.url)
+  const verify = url.searchParams.get('verify') !== 'false' // Verify by default
+  const limit = parseInt(url.searchParams.get('limit') || '1000') // Limit to 1000 by default
+  
   try {
     log.push('🚀 Starting IPTV-org channel import...')
+    log.push(`   Verification: ${verify ? 'ENABLED' : 'DISABLED'}`)
+    log.push(`   Limit: ${limit} channels`)
     
     // Fetch data from IPTV-org
     log.push('📡 Fetching channel and stream data...')
@@ -75,38 +105,71 @@ export async function GET() {
     
     log.push(`✅ Found ${channels.length} channels and ${streams.length} streams`)
     
-    // Build stream lookup map
+    // Build stream lookup map - only ONLINE streams
     const streamMap = new Map<string, any[]>()
-    streams.forEach((stream: any) => {
-      if (stream.channel && stream.url && stream.status?.toLowerCase() === 'online') {
+    let onlineStreams = 0
+    
+    for (const stream of streams) {
+      if (stream.channel && 
+          stream.url && 
+          stream.status?.toLowerCase() === 'online' &&
+          (stream.url.startsWith('http://') || stream.url.startsWith('https://'))) {
+        
         if (!streamMap.has(stream.channel)) {
           streamMap.set(stream.channel, [])
         }
         streamMap.get(stream.channel)!.push(stream)
+        onlineStreams++
       }
-    })
+    }
+    
+    log.push(`✅ Filtered to ${onlineStreams} online streams`)
     
     // Process channels by country
-    const channelsByCountry = new Map<string, any[]>()
+    const channelsToInsert: any[] = []
     let totalProcessed = 0
+    let verifiedCount = 0
+    let failedVerification = 0
     
     for (const channel of channels) {
+      if (totalProcessed >= limit) break
       if (!channel.country || !streamMap.has(channel.id)) continue
       
       const countryCode = channel.country.toLowerCase()
       if (!COUNTRY_CODES[countryCode as keyof typeof COUNTRY_CODES]) continue
       
-      const channelStreams = streamMap.get(channel.id)
-      if (!channelStreams || channelStreams.length === 0) continue
+      const channelStreams = streamMap.get(channel.id) || []
+      if (channelStreams.length === 0) continue
       
-      const stream = channelStreams[0]
+      // Try to find a working stream
+      let workingStream = null
+      
+      for (const stream of channelStreams) {
+        if (verify) {
+          const isWorking = await verifyStream(stream.url)
+          if (isWorking) {
+            workingStream = stream
+            verifiedCount++
+            break
+          } else {
+            failedVerification++
+          }
+        } else {
+          // No verification - use first stream
+          workingStream = stream
+          break
+        }
+      }
+      
+      if (!workingStream) continue
       
       const channelData = {
         id: generateChannelId(channel.name, countryCode),
         name: channel.name,
+        call_sign: channel.id,
         network: channel.network || null,
         logo_url: channel.logo || null,
-        stream_url: stream.url,
+        stream_url: workingStream.url,
         country_id: countryCode,
         region_id: null,
         city_id: null,
@@ -114,51 +177,54 @@ export async function GET() {
         is_local: false,
         category: categorizeChannel(channel.name, channel.categories),
         language: channel.languages?.[0] || 'en',
-        hd: stream.url.includes('1080') || stream.url.includes('hd'),
+        hd: workingStream.url.includes('1080') || workingStream.url.includes('hd'),
         is_active: true,
         last_checked: new Date().toISOString()
       }
       
-      if (!channelsByCountry.has(countryCode)) {
-        channelsByCountry.set(countryCode, [])
-      }
-      channelsByCountry.get(countryCode)!.push(channelData)
+      channelsToInsert.push(channelData)
       totalProcessed++
+      
+      // Progress update every 50 channels
+      if (totalProcessed % 50 === 0) {
+        log.push(`   Processed ${totalProcessed} channels...`)
+      }
     }
     
-    log.push(`✅ Processed ${totalProcessed} channels with working streams`)
+    log.push(`✅ Processed ${totalProcessed} channels`)
+    if (verify) {
+      log.push(`   Verified working: ${verifiedCount}`)
+      log.push(`   Failed verification: ${failedVerification}`)
+    }
     
-    // Show distribution
+    // Show distribution by country
     const distribution: Record<string, number> = {}
-    for (const [country, chs] of channelsByCountry.entries()) {
-      distribution[COUNTRY_CODES[country as keyof typeof COUNTRY_CODES]] = chs.length
+    for (const ch of channelsToInsert) {
+      const country = COUNTRY_CODES[ch.country_id as keyof typeof COUNTRY_CODES]
+      distribution[country] = (distribution[country] || 0) + 1
     }
-    log.push(`📊 Distribution: ${JSON.stringify(distribution, null, 2)}`)
     
     // Insert into database in batches
     log.push('💾 Inserting into database...')
     let insertedCount = 0
     let errorCount = 0
     
-    for (const [country, chs] of channelsByCountry.entries()) {
-      // Insert in batches of 50
-      for (let i = 0; i < chs.length; i += 50) {
-        const batch = chs.slice(i, i + 50)
-        
-        const { error } = await supabase
-          .from('channels')
-          .upsert(batch, { onConflict: 'id' })
-        
-        if (error) {
-          log.push(`❌ Error inserting batch for ${country}: ${error.message}`)
-          errorCount += batch.length
-        } else {
-          insertedCount += batch.length
-        }
-        
-        // Small delay to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 50))
+    for (let i = 0; i < channelsToInsert.length; i += 50) {
+      const batch = channelsToInsert.slice(i, i + 50)
+      
+      const { error } = await supabase
+        .from('channels')
+        .upsert(batch, { onConflict: 'id' })
+      
+      if (error) {
+        log.push(`❌ Error inserting batch: ${error.message}`)
+        errorCount += batch.length
+      } else {
+        insertedCount += batch.length
       }
+      
+      // Small delay
+      await new Promise(resolve => setTimeout(resolve, 100))
     }
     
     const duration = ((Date.now() - startTime) / 1000).toFixed(2)
@@ -168,7 +234,7 @@ export async function GET() {
     log.push(`   Total processed: ${totalProcessed}`)
     log.push(`   Successfully inserted: ${insertedCount}`)
     log.push(`   Errors: ${errorCount}`)
-    log.push(`   Countries: ${channelsByCountry.size}`)
+    log.push(`   Countries: ${Object.keys(distribution).length}`)
     log.push(`   Duration: ${duration}s`)
     
     return NextResponse.json({
@@ -176,7 +242,9 @@ export async function GET() {
       totalProcessed,
       insertedCount,
       errorCount,
-      countries: channelsByCountry.size,
+      verifiedCount,
+      failedVerification,
+      countries: Object.keys(distribution).length,
       distribution,
       duration: `${duration}s`,
       log
