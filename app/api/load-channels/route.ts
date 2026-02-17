@@ -6,14 +6,9 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-// M3U playlist sources for maximum channel coverage
-const M3U_SOURCES = [
-  'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',
-  'https://iptv-org.github.io/iptv/index.m3u',
-  'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/us.m3u',
-  'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/gb.m3u',
-  'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/ca.m3u'
-]
+// IPTV-org data URLs
+const CHANNELS_URL = 'https://iptv-org.github.io/iptv/channels.json'
+const STREAMS_URL = 'https://iptv-org.github.io/iptv/streams.json'
 
 const COUNTRY_CODES = {
   'us': 'United States',
